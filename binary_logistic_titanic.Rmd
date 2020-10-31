@@ -1,0 +1,70 @@
+---
+title: "binary_logistic_titanic"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#importing datasets into the file
+```{r import_dataset}
+titanic<-read.csv("C:/Users/Shital/Documents/Data Science learning material/R Lectures/R Project/titanic.csv" ,na.strings = c(",","NA"),stringsAsFactors = T)
+head(titanic)
+str(titanic)
+summary(titanic)
+#check missing values
+colSums(is.na(titanic))
+#imputing the missing values
+#imputing age
+titanic$Age[is.na(titanic$Age)]<-median(titanic$Age,na.rm = T)
+colSums(is.na(titanic))
+colSums(is.na(titanic))
+summary(titanic)
+#convert numeric to factor
+# check if any variable is needed to get converted into other form
+
+# remove name and P_id as it is not used in regression
+titanic$PassengerId<-NULL
+titanic$Name<-NULL
+titanic$Ticket<-NULL
+# convert survived , pclass, parch, sibsp in factor as athey have discreet values
+titanic$Survived<-as.factor(titanic$Survived)
+titanic$Parch<-as.factor(titanic$Parch)
+titanic$Pclass<-as.factor(titanic$Pclass)
+titanic$SibSp<-as.factor(titanic$SibSp)
+```
+```{r glm_implementation}
+titanic_model<-glm(Survived~.,data=titanic,family = "binomial")
+summary(titanic_model)
+titanic_model_rev<-glm(Survived~Pclass+Sex+Age+SibSp,data=titanic,family = "binomial")
+summary(titanic_model_rev)
+```
+
+```{r prediction}
+titanic$pred_prob<-predict(titanic_model_rev,titanic,type="response")
+head(titanic)
+library(ROCR)
+pred<-prediction(titanic$pred_prob,titanic$Survived)
+perf<-performance(pred,"tpr","tnr")
+plot(perf,colorize=T,print.cutoffs.at=seq(0.3,0.4,0.05))
+#consider cutooff as 0.35
+titanic$pred_survival<-ifelse(titanic$pred_prob>0.35,"1","0")
+table(pred=titanic$pred_survival,actual=titanic$Survived)
+#acuuracy<-correctly predicted 1and 0/total observations
+acc<-(421+272)/nrow(titanic)
+#misclassification
+1-acc
+#sensitivity
+272/(128+272)
+#specoficity
+421/(421+70)
+#precision
+272/(128+272)
+#prevelance
+421/nrow(titanic)
+#area under curve:overall acuuracy
+auc_titanic<-performance(pred,"auc")
+auc_titanic@y.values
+```
